@@ -75,21 +75,36 @@
 /* USER CODE BEGIN Variables */
 
 /*Prioridades de las Tareas Periodicas*/
-#define PR_TAREA1 2
-#define PR_TAREA2 1
+#define PR_TAREA1 1
+#define PR_TAREA2 2
+#define PR_TAREA3 3
+#define PR_TAREA4	4
+#define PR_TAREA5 5
 /*Periodos de las tareas*/
-#define T_TAREA1 300
+#define T_TAREA1 200
+#define T_TAREA2 300
+#define T_TAREA3 300
+#define T_TAREA4 200
+#define T_TAREA5 250
+#define LONG_TIME 0xffff
 
+ 
  /* USER CODE BEGIN RTOS_MUTEX */
  
    /*********************Semaforo 1*********************/ ;
    SemaphoreHandle_t Semaforo_1 = NULL;
+	 SemaphoreHandle_t xSemaphore;
 	 
 	 /* Declarar aquí las variables protegidas por el semáforo 1 */
    double Altitud = 0; // Altitud  
    double RX = 0; // Inclinacion eje X 
    double RY = 0; // Inclinacion eje Y
 	 double X,Y,Z;
+	 double lastaltitud = 0;
+	 double lastX = 0;
+	 double lastY =  0;
+	 double debugX =  0;
+	 int vibraciones = 1;
 
    /* Tarea y mutex creados con CMSIS 
    osThreadId Tarea1Handle;
@@ -99,9 +114,14 @@
 /* USER CODE BEGIN FunctionPrototypes */
    void StartTarea1(void const * argument);
 	 void startTarea2(void const * argument);
-	
+	 void startTarea3(void const * argument);
+	 void startTarea4(void const * argument);
+	 void startTarea5(void const * argument);
+	 int checkVibration();
 /* Variables para depuracion */
    int ContTarea1 = 0;
+	 int altitud_objetivo = 600;
+	 
 	 
 	 void Obtain_Coordinates_XYZ()
 /* Calculate acc. coordinates and stores them in global variables X Y Z */
@@ -169,10 +189,11 @@ int main(void)
   MX_ADC2_Init();
   MX_ADC3_Init();
   MX_I2C2_Init();
-	
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
   /* USER CODE BEGIN Init */
   Inicializa_Acelerometro();
   /* USER CODE END Init */
+	xSemaphore = xSemaphoreCreateBinary();
 
   /* Create the mutex using CMSIS
   osMutexDef(mutex1);
@@ -183,9 +204,11 @@ int main(void)
   Tarea1Handle = osThreadCreate(osThread(Tarea1), NULL); */
 
   /* USER CODE BEGIN RTOS_THREADS using FreeRTOS */
-   /* xTaskCreate(StartTarea1, "Tarea inicial", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL); */
-	xTaskCreate(startTarea2, "Tarea inicial 2", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL);
-
+  xTaskCreate(StartTarea1, "Tarea inicial", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL);
+	xTaskCreate(startTarea2, "Tarea inicial 2", configMINIMAL_STACK_SIZE, NULL, PR_TAREA2, NULL);
+  /*xTaskCreate(startTarea3, "Tarea inicial 3", configMINIMAL_STACK_SIZE, NULL, PR_TAREA3, NULL); */
+	xTaskCreate(startTarea4, "Tarea inicial 4", configMINIMAL_STACK_SIZE, NULL, PR_TAREA4, NULL);
+	xTaskCreate(startTarea5, "Tarea inicial 5", configMINIMAL_STACK_SIZE, NULL, PR_TAREA5, NULL);
   /* Start scheduler */
   osKernelStart();
 
@@ -204,7 +227,8 @@ void StartTarea1(void const * argument)
 
 	 TickType_t lastWakeTime;
    lastWakeTime = xTaskGetTickCount();
- 	
+ 	 
+	
 	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
 	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
 	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
@@ -252,8 +276,93 @@ HAL_ADC_Start(&hadc1); // comienza la conversón AD
 if(HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK){
 Lectura_ADC1 = HAL_ADC_GetValue(&hadc1); // leemos el valor
 Altitud = Lectura_ADC1; // actualizamos una variable global }
-vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA1 )); 
+vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA2 )); 
 }
+}}
+
+
+void startTarea3(void const * argument){
+	TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
+/* 8 y 9 X  10 y 11 para Y  */
+for(;;){
+if (Altitud < altitud_objetivo){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	
+}else{
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+
+}
+vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA2 )); 
+}
+
+}
+
+void startTarea4(void const * argument){
+	TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
+for(;;){
+if (RX < -10.0){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+}else if(RX > 10.0 ){
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+}else{
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+}
+
+
+if (RY < -10.0){
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+}else if(RY > 10.0 ){
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+}else{
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+}
+
+
+vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA4 )); 
+}
+}
+
+
+void startTarea5(void const * argument){
+	TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
+for(;;){
+ // Obtain_Coordinates_XYZ();
+	debugX=X - lastX;
+ if(X - lastX > 0.2 || X - lastX < 0.05 ){
+	 vibraciones = vibraciones + 1;
+   if( vibraciones == 3){
+			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+	 }
+
+
+
+} else{
+	 vibraciones = 0;
+ }
+lastaltitud = Z;
+lastX = X ;
+lastY =  Y ;
+	vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA5 )); 
+}
+}
+
+int checkVibration(){
+if(Z - lastaltitud > 0.10 || X - lastX > 0.10 || Y - lastY > 0.10 ){
+
+return 1;
+}else{
+return 0;
 }}
 
 void SystemClock_Config(void)
