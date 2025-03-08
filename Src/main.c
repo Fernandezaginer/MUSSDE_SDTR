@@ -80,12 +80,14 @@
 #define PR_TAREA3 3
 #define PR_TAREA4	4
 #define PR_TAREA5 5
+#define PR_TAREA6 6
 /*Periodos de las tareas*/
 #define T_TAREA1 200
 #define T_TAREA2 300
 #define T_TAREA3 300
 #define T_TAREA4 200
-#define T_TAREA5 250
+#define T_TAREA5 400
+#define T_TAREA6 200
 #define LONG_TIME 0xffff
 
  
@@ -94,6 +96,11 @@
    /*********************Semaforo 1*********************/ ;
    SemaphoreHandle_t Semaforo_1 = NULL;
 	 SemaphoreHandle_t xSemaphore;
+	// Semaforo para sincronizar tarea esporadica e interrupcion
+	SemaphoreHandle_t Semaforo_Interrupcion = NULL; 
+	// Crear el semáforo binario 
+
+	 
 	 
 	 /* Declarar aquí las variables protegidas por el semáforo 1 */
    double Altitud = 0; // Altitud  
@@ -105,6 +112,7 @@
 	 double lastY =  0;
 	 double debugX =  0;
 	 int vibraciones = 1;
+	 int AltitudMotor = 0, RyMotor = 0 , RxMotor = 0;
 
    /* Tarea y mutex creados con CMSIS 
    osThreadId Tarea1Handle;
@@ -117,10 +125,13 @@
 	 void startTarea3(void const * argument);
 	 void startTarea4(void const * argument);
 	 void startTarea5(void const * argument);
+	 void startTarea6(void const * argument);
+	 void startTarea7(void const * argument);
 	 int checkVibration();
 /* Variables para depuracion */
    int ContTarea1 = 0;
 	 int altitud_objetivo = 600;
+	 int start= 0;
 	 
 	 
 	 void Obtain_Coordinates_XYZ()
@@ -194,7 +205,7 @@ int main(void)
   Inicializa_Acelerometro();
   /* USER CODE END Init */
 	xSemaphore = xSemaphoreCreateBinary();
-
+  Semaforo_Interrupcion = xSemaphoreCreateBinary();
   /* Create the mutex using CMSIS
   osMutexDef(mutex1);
   mutex1Handle = osMutexCreate(osMutex(mutex1)); */
@@ -206,9 +217,11 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS using FreeRTOS */
   xTaskCreate(StartTarea1, "Tarea inicial", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL);
 	xTaskCreate(startTarea2, "Tarea inicial 2", configMINIMAL_STACK_SIZE, NULL, PR_TAREA2, NULL);
-  /*xTaskCreate(startTarea3, "Tarea inicial 3", configMINIMAL_STACK_SIZE, NULL, PR_TAREA3, NULL); */
+  xTaskCreate(startTarea3, "Tarea inicial 3", configMINIMAL_STACK_SIZE, NULL, PR_TAREA3, NULL); 
 	xTaskCreate(startTarea4, "Tarea inicial 4", configMINIMAL_STACK_SIZE, NULL, PR_TAREA4, NULL);
 	xTaskCreate(startTarea5, "Tarea inicial 5", configMINIMAL_STACK_SIZE, NULL, PR_TAREA5, NULL);
+	xTaskCreate(startTarea6, "Tarea inicial 6", configMINIMAL_STACK_SIZE, NULL, PR_TAREA6, NULL);
+	xTaskCreate(startTarea7, "Tarea inicial 7", configMINIMAL_STACK_SIZE, NULL, PR_TAREA6, NULL);
   /* Start scheduler */
   osKernelStart();
 
@@ -287,16 +300,18 @@ void startTarea3(void const * argument){
 /* 8 y 9 X  10 y 11 para Y  */
 for(;;){
 if (Altitud < altitud_objetivo){
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+	/* HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET); */
+	AltitudMotor=1;
 	
 }else{
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+	/*HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET); */
+	AltitudMotor=0;
 
 }
 vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA2 )); 
@@ -309,22 +324,28 @@ void startTarea4(void const * argument){
   lastWakeTime = xTaskGetTickCount();
 for(;;){
 if (RX < -10.0){
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+	RxMotor = -1;
 }else if(RX > 10.0 ){
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+	RxMotor = 1;
 }else{
-	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	RxMotor = 0;
+	//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 }
 
 
 if (RY < -10.0){
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+	RyMotor=-1;
 }else if(RY > 10.0 ){
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+	RyMotor=1;
 }else{
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+	RyMotor=0;
 }
 
 
@@ -339,14 +360,11 @@ void startTarea5(void const * argument){
 for(;;){
  // Obtain_Coordinates_XYZ();
 	debugX=X - lastX;
- if(X - lastX > 0.2 || X - lastX < 0.05 ){
+ if(X - lastX > 0.2 || X - lastX < -0.2 || Y - lastY > 0.2 || Y - lastY < -0.2 || Z - lastaltitud > 0.2 || Z - lastaltitud < -0.2 ){
 	 vibraciones = vibraciones + 1;
    if( vibraciones == 3){
 			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
 	 }
-
-
-
 } else{
 	 vibraciones = 0;
  }
@@ -357,13 +375,92 @@ lastY =  Y ;
 }
 }
 
-int checkVibration(){
-if(Z - lastaltitud > 0.10 || X - lastX > 0.10 || Y - lastY > 0.10 ){
+void startTarea6(void const * argument){
+	TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
 
-return 1;
-}else{
-return 0;
-}}
+
+	
+	for(;;){
+	if(start ==1){
+	if (AltitudMotor == 1) {
+	  if(RxMotor != 0 || RyMotor != 0){
+		if(RxMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+		if(RxMotor == -1) HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+		if(RyMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+		if(RyMotor == -1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+		}else{
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+		}
+	}else{
+		if(RxMotor != 0 || RyMotor != 0){
+		if(RxMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+		if(RxMotor == -1) HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+		if(RyMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+		if(RyMotor == -1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+		}else{
+		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);			
+		}
+		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+	}
+
+	vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA5 )); 
+	
+}
+	}
+	
+}
+void startTarea7(void const * argument){
+	TickType_t lastWakeTime;
+  lastWakeTime = xTaskGetTickCount();
+
+
+	
+	for(;;){
+	xSemaphoreTake(Semaforo_Interrupcion, portMAX_DELAY);	
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_14);
+	if(start == 0){start = 1;}else {start=0;}
+	}
+
+}
+
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
+	long yield = pdFALSE; 
+// se pondrá a pdTRUE si una tarea de mayor prioridad estaba esperando y es desbloqueada
+  if (GPIO_Pin == GPIO_PIN_0) {
+	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Enciende/apaga un LED 
+	xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
+	portYIELD_FROM_ISR(yield); 
+	// para que FreeRTOS haga un cambio de contexto al terminar la ISR
+	}
+	if (GPIO_Pin == GPIO_PIN_3) {
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15); // Enciende/apaga un LED
+			xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
+			portYIELD_FROM_ISR(yield); 
+			// para que FreeRTOS haga un cambio de contexto al terminar la ISR
+
+	}
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
 
 void SystemClock_Config(void)
 {

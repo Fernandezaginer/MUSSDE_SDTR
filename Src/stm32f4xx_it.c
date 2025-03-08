@@ -248,9 +248,7 @@ void I2C2_EV_IRQHandler(void)
 
 /* USER CODE BEGIN 1 */
 
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
-}
 
 /* USER CODE END 1 */
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
