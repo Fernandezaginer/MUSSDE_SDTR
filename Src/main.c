@@ -95,7 +95,8 @@
  
    /*********************Semaforo 1*********************/ ;
    SemaphoreHandle_t Semaforo_1 = NULL;
-	 SemaphoreHandle_t xSemaphore;
+	 SemaphoreHandle_t xSemaphore = NULL;
+	 
 	// Semaforo para sincronizar tarea esporadica e interrupcion
 	SemaphoreHandle_t Semaforo_Interrupcion = NULL; 
 	// Crear el sem�foro binario 
@@ -113,6 +114,7 @@
 	 double debugX =  0;
 	 int vibraciones = 1;
 	 int AltitudMotor = 0, RyMotor = 0 , RxMotor = 0;
+	 int potenciaMotor = 0;
 
    /* Tarea y mutex creados con CMSIS 
    osThreadId Tarea1Handle;
@@ -131,18 +133,10 @@
 /* Variables para depuracion */
    int ContTarea1 = 0;
 	 int altitud_objetivo = 600;
-
-   int Xfor = 0;
-   int Xback = 0;
-   int X0 = 0;
-   int Yright = 0;
-   int Yleft = 0;
-   int Y0 = 0;
 	 int start= 0;
-   int wait = 0;
-   int risk = 0;
-   int recover = 0;
 
+
+	 
 	 
 	 void Obtain_Coordinates_XYZ()
 /* Calculate acc. coordinates and stores them in global variables X Y Z */
@@ -183,7 +177,44 @@ return rotY;
 }
 
 
+void Potencia(int potencia){
+     switch (potencia) {
+        
+        case 5:
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+				    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+				    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
+				    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+				    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+            break;
+        case 4:
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+            break;
+			 case 3:
+				 	  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+            break;
+        case 2:
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+            break;
+        case 1:
+						HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+            break;
+				case 0:
+						HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+				    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
+				    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
+				    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
+				    HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_SET);
+						break;
 
+
+}}
 
 void M1on(void){
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
@@ -210,19 +241,384 @@ void M4off(void){
 	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
 }
 
+void Allon(void){
+	M1on();
+	M2on();
+	M3on();
+	M4on();
+}
+	
+
+
+void Alloff(void){
+  M1off();
+	M2off();
+	M3off();
+	M4off();
+}
 void L1on(void){
-	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOH, GPIO_PIN_0, GPIO_PIN_SET);
 }
 void L1off(void){
-	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOH, GPIO_PIN_0, GPIO_PIN_RESET);
 }
 void L2on(void){
-	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+ HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
 }
 void L2off(void){
-	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
+}
+enum estado_t {STANDBY, INCL_OK, ADJUSTING, ALTITUD ,STOP};
+enum estado_t estado = STANDBY;
+
+void Xfor(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = ADJUSTING;
+			M1on();
+			M2off();
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			M1on();
+			M2off();
+			break;
+		case ALTITUD:
+			estado = ADJUSTING;
+			M1on();
+			M2off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+}
+xSemaphoreGive( xSemaphore );
+	
 }
 
+void Xback(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = ADJUSTING;
+			M2on();
+			M1off();
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			M2on();
+			M1off();
+			break;
+		case ALTITUD:
+			estado = ADJUSTING;
+			M2on();
+			M1off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+void X0(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = INCL_OK;
+			break;
+		case ADJUSTING:
+			estado = INCL_OK;
+			M2off();
+			M1off();
+			break;
+		case ALTITUD:
+			estado = ALTITUD;
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+
+void Yfor(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = ADJUSTING;
+			M3on();
+			M4off();
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			M3on();
+			M4off();
+			break;
+		case ALTITUD:
+			estado = ADJUSTING;
+			M3on();
+			M4off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+
+void Yback(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = ADJUSTING;
+			M4on();
+			M3off();
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			M4on();
+			M3off();
+			break;
+		case ALTITUD:
+			estado = ADJUSTING;
+			M4on();
+			M3off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+void Y0(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = INCL_OK;
+			break;
+		case ADJUSTING:
+			estado = INCL_OK;
+			M4off();
+			M3off();
+			break;
+		case ALTITUD:
+			estado = ALTITUD;
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+void Altok(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = INCL_OK;
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			break;
+		case ALTITUD:
+			estado = INCL_OK;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+
+}
+void Ascend(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+		switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = ALTITUD;
+			M1on();
+			M2on();
+			M3on();
+			M4on();
+			break;
+		case ALTITUD:
+			estado = ALTITUD;
+			M1on();
+			M2on();
+			M3on();
+			M4on();
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+	
+}
+
+void Risk(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = STOP;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L2on();
+			break;
+		case ALTITUD:
+			estado = STOP;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L2on();
+			break;
+		case ADJUSTING:
+			estado = STOP;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L2on();
+			break;
+		case STOP:
+			estado = STOP;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L2on();
+			
+			break;
+	}
+xSemaphoreGive( xSemaphore );
+	
+}
+void Recover(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+		switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = INCL_OK;
+			break;
+		case ALTITUD:
+			estado = ALTITUD;
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			break;
+		case STOP:
+			estado = STANDBY;
+			L2off();
+			break;
+	}
+	xSemaphoreGive( xSemaphore );
+
+}
+void Wait(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+		switch(estado){
+		case STANDBY:
+			estado = STANDBY;
+			break;
+		case INCL_OK:
+			estado = STANDBY;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L1off();
+			break;
+		case ALTITUD:
+			estado = STANDBY;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L1off();
+			break;
+		case ADJUSTING:
+			estado = STANDBY;
+			M1off();
+			M2off();
+			M4off();
+			M3off();
+			L1off();
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+		xSemaphoreGive( xSemaphore );
+}
+
+void Start(void){
+	xSemaphoreTake( xSemaphore, portMAX_DELAY);
+	switch(estado){
+		case STANDBY:
+			start = 1;
+			estado = INCL_OK;
+			L1on();
+			break;
+		case INCL_OK:
+			estado = ADJUSTING;
+			break;
+		case ALTITUD:
+			estado = ALTITUD;
+			break;
+		case ADJUSTING:
+			estado = ADJUSTING;
+			break;
+		case STOP:
+			estado = STOP;
+			break;
+	}
+	xSemaphoreGive( xSemaphore );
+
+	
+}
 
 
 
@@ -257,7 +653,7 @@ int main(void)
   /* USER CODE BEGIN Init */
   Inicializa_Acelerometro();
   /* USER CODE END Init */
-	xSemaphore = xSemaphoreCreateBinary();
+	xSemaphore = xSemaphoreCreateMutex();
   Semaforo_Interrupcion = xSemaphoreCreateBinary();
   /* Create the mutex using CMSIS
   osMutexDef(mutex1);
@@ -273,7 +669,6 @@ int main(void)
   xTaskCreate(startTarea3, "Tarea inicial 3", configMINIMAL_STACK_SIZE, NULL, PR_TAREA3, NULL); 
 	xTaskCreate(startTarea4, "Tarea inicial 4", configMINIMAL_STACK_SIZE, NULL, PR_TAREA4, NULL);
 	xTaskCreate(startTarea5, "Tarea inicial 5", configMINIMAL_STACK_SIZE, NULL, PR_TAREA5, NULL);
-	xTaskCreate(startTarea6, "Tarea inicial 6", configMINIMAL_STACK_SIZE, NULL, PR_TAREA6, NULL);
 	xTaskCreate(startTarea7, "Tarea inicial 7", configMINIMAL_STACK_SIZE, NULL, PR_TAREA6, NULL);
   /* Start scheduler */
   osKernelStart();
@@ -293,21 +688,13 @@ void StartTarea1(void const * argument)
 
 	 TickType_t lastWakeTime;
    lastWakeTime = xTaskGetTickCount();
- 	 
-	
-	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
-	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
-	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
-	 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+ 
+
 	
   /* Infinite loop */
   for(;;)
   {
 		ContTarea1 ++;
-		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_12); 		
-	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_13); 
-		HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_14); 		
-	  HAL_GPIO_TogglePin(GPIOD, GPIO_PIN_15); 
 		RX = Calculate_RotationX();
 		RY = Calculate_RotationY();
     // osDelay(1);
@@ -356,15 +743,18 @@ if (Altitud < altitud_objetivo){
 	/* HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
   HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET); */
-	AltitudMotor=1;
+	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET); 
+
+	potencia(5*floor(1-(Altitud/ altitud_objetivo)))*/
+		Ascend();
 	
 }else{
 	/*HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
 	HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET); */
-	AltitudMotor=0;
+	
+	Altok();
 
 }
 vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA2 )); 
@@ -377,28 +767,20 @@ void startTarea4(void const * argument){
   lastWakeTime = xTaskGetTickCount();
 for(;;){
 if (RX < -10.0){
-	//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
-	RxMotor = -1;
+	Xback();
 }else if(RX > 10.0 ){
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-	RxMotor = 1;
+	Xfor();
 }else{
-	RxMotor = 0;
-	//HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
+	X0();
 }
 
 
 if (RY < -10.0){
-	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-	RyMotor=-1;
+	Yback();
 }else if(RY > 10.0 ){
-	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-	RyMotor=1;
+	Yfor();
 }else{
-	//HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-	// HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);
-	RyMotor=0;
+	Y0();
 }
 
 
@@ -406,60 +788,7 @@ vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA4 ));
 }
 }
 
-
-
-enum estado_t {STANDBY, INCL_OK, ADJUSTING, STOP};
-enum estado_t estado = estado_t.STANDBY;
-
-
 void startTarea5(void const * argument){
-
-  switch(estado){
-      case estado_t.STANDBY:
-        if(start == 1){
-          estado_t.INCL_OK;
-        }
-        break;
-      case estado_t.ADJUSTING:
-        if(X0 == 1){
-          estado_t.INCL_OK;
-          M1off();
-          M2off();
-        }
-        if(wait == 1){
-          estado_t.STANDBY;
-          M1off();
-          M2off();
-          M3off();
-          M4off();
-        }
-        break;
-      case estado_t.INCL_OK:
-        if(Xfor == 1){
-          M1on();
-          estado_t.ADJUSTING;
-        }
-        if(Xback == 1){
-          M4on();
-          estado_t.ADJUSTING;
-        }
-        break;
-      case estado_t.STOP:
-        if(recover == 1){
-          L2off();
-          estado_t.STANDBY;
-        }
-        break;
-  }
-  if(risk == 1){
-    L2on();
-    M1off();
-    M2off();
-    M3off();
-    M4off();
-    estado_t.STOP;
-  }
-
   TickType_t lastWakeTime;
   lastWakeTime = xTaskGetTickCount();
   for(;;){
@@ -468,7 +797,7 @@ void startTarea5(void const * argument){
   if(X - lastX > 0.2 || X - lastX < -0.2 || Y - lastY > 0.2 || Y - lastY < -0.2 || Z - lastaltitud > 0.2 || Z - lastaltitud < -0.2 ){
     vibraciones = vibraciones + 1;
     if( vibraciones == 3){
-        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+        Risk();
     }
   } else{
     vibraciones = 0;
@@ -480,47 +809,15 @@ void startTarea5(void const * argument){
   }
 }
 
-void startTarea6(void const * argument){
-	TickType_t lastWakeTime;
-  lastWakeTime = xTaskGetTickCount();
+// enum estado_t {STANDBY, INCL_OK, ADJUSTING, STOP};
+
+// enum estado_t estado = estado_t.STANDBY;
 
 
-	
-	for(;;){
-	if(start ==1){
-	if (AltitudMotor == 1) {
-	  if(RxMotor != 0 || RyMotor != 0){
-		if(RxMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-		if(RxMotor == -1) HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
-		if(RyMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-		if(RyMotor == -1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-		}else{
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-		}
-	}else{
-		if(RxMotor != 0 || RyMotor != 0){
-		if(RxMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
-		if(RxMotor == -1) HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_RESET);
-		if(RyMotor == 1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
-		if(RyMotor == -1) HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_RESET);
-		}else{
-		 HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);
-		 HAL_GPIO_WritePin(GPIOD, GPIO_PIN_1, GPIO_PIN_SET);
-     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);
-     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_10, GPIO_PIN_SET);			
-		}
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
-	}
 
-	vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA5 )); 
-	
-}
-	}
-	
-}
+
+
+
 void startTarea7(void const * argument){
 	TickType_t lastWakeTime;
   lastWakeTime = xTaskGetTickCount();
@@ -529,8 +826,8 @@ void startTarea7(void const * argument){
 	
 	for(;;){
 	xSemaphoreTake(Semaforo_Interrupcion, portMAX_DELAY);	
-	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_14);
-	if(start == 0){start = 1;}else {start=0;}
+	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_14);
+	if(start == 0){Start();}else {Wait();}
 	}
 
 }
@@ -540,13 +837,13 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	long yield = pdFALSE; 
 // se pondr� a pdTRUE si una tarea de mayor prioridad estaba esperando y es desbloqueada
   if (GPIO_Pin == GPIO_PIN_0) {
-	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Enciende/apaga un LED 
+	//HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Enciende/apaga un LED 
 	xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
 	portYIELD_FROM_ISR(yield); 
 	// para que FreeRTOS haga un cambio de contexto al terminar la ISR
 	}
 	if (GPIO_Pin == GPIO_PIN_3) {
-			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15); // Enciende/apaga un LED
+		//	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_15); // Enciende/apaga un LED
 			xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
 			portYIELD_FROM_ISR(yield); 
 			// para que FreeRTOS haga un cambio de contexto al terminar la ISR
@@ -555,15 +852,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 
 
 }
-
-
-
-
-
-
-
-
-
 
 
 
