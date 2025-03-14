@@ -131,8 +131,18 @@
 /* Variables para depuracion */
    int ContTarea1 = 0;
 	 int altitud_objetivo = 600;
+
+   int Xfor = 0;
+   int Xback = 0;
+   int X0 = 0;
+   int Yright = 0;
+   int Yleft = 0;
+   int Y0 = 0;
 	 int start= 0;
-	 
+   int wait = 0;
+   int risk = 0;
+   int recover = 0;
+
 	 
 	 void Obtain_Coordinates_XYZ()
 /* Calculate acc. coordinates and stores them in global variables X Y Z */
@@ -398,23 +408,57 @@ vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA4 ));
 
 
 
-// enum estado_t {STANDBY, INCL_OK, ADJUSTING, STOP};
-
-// enum estado_t estado = estado_t.STANDBY;
+enum estado_t {STANDBY, INCL_OK, ADJUSTING, STOP};
+enum estado_t estado = estado_t.STANDBY;
 
 
 void startTarea5(void const * argument){
 
-  // switch(estado){
-  //     case estado_t.STANDBY:
-  //     break;
-  //     case estado_t.ADJUSTING:
-  //     break;
-  //     case estado_t.INCL_OK:
-  //     break;
-  //     case estado_t.STOP:
-  //     break;
-  // }
+  switch(estado){
+      case estado_t.STANDBY:
+        if(start == 1){
+          estado_t.INCL_OK;
+        }
+        break;
+      case estado_t.ADJUSTING:
+        if(X0 == 1){
+          estado_t.INCL_OK;
+          M1off();
+          M2off();
+        }
+        if(wait == 1){
+          estado_t.STANDBY;
+          M1off();
+          M2off();
+          M3off();
+          M4off();
+        }
+        break;
+      case estado_t.INCL_OK:
+        if(Xfor == 1){
+          M1on();
+          estado_t.ADJUSTING;
+        }
+        if(Xback == 1){
+          M4on();
+          estado_t.ADJUSTING;
+        }
+        break;
+      case estado_t.STOP:
+        if(recover == 1){
+          L2off();
+          estado_t.STANDBY;
+        }
+        break;
+  }
+  if(risk == 1){
+    L2on();
+    M1off();
+    M2off();
+    M3off();
+    M4off();
+    estado_t.STOP;
+  }
 
   TickType_t lastWakeTime;
   lastWakeTime = xTaskGetTickCount();
