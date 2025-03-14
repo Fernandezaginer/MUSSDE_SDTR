@@ -508,6 +508,7 @@ void Risk(void){
 			M4off();
 			M3off();
 			L2on();
+			L1off();
 			break;
 		case ALTITUD:
 			estado = STOP;
@@ -516,6 +517,7 @@ void Risk(void){
 			M4off();
 			M3off();
 			L2on();
+			L1off();
 			break;
 		case ADJUSTING:
 			estado = STOP;
@@ -524,6 +526,7 @@ void Risk(void){
 			M4off();
 			M3off();
 			L2on();
+			L1off();
 			break;
 		case STOP:
 			estado = STOP;
@@ -532,6 +535,7 @@ void Risk(void){
 			M4off();
 			M3off();
 			L2on();
+			L1off();
 			
 			break;
 	}
