@@ -257,16 +257,16 @@ void Alloff(void){
 	M4off();
 }
 void L1on(void){
-	HAL_GPIO_WritePin(GPIOH, GPIO_PIN_0, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
 }
 void L1off(void){
-	HAL_GPIO_WritePin(GPIOH, GPIO_PIN_0, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
 }
 void L2on(void){
- HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
 }
 void L2off(void){
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_14, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 }
 enum estado_t {STANDBY, INCL_OK, ADJUSTING, ALTITUD ,STOP};
 enum estado_t estado = STANDBY;
@@ -336,6 +336,8 @@ void X0(void){
 			break;
 		case INCL_OK:
 			estado = INCL_OK;
+			M2off();
+			M1off();
 			break;
 		case ADJUSTING:
 			estado = INCL_OK;
@@ -418,6 +420,8 @@ void Y0(void){
 			break;
 		case INCL_OK:
 			estado = INCL_OK;
+			M4off();
+			M3off();
 			break;
 		case ADJUSTING:
 			estado = INCL_OK;
@@ -570,6 +574,7 @@ void Wait(void){
 			M4off();
 			M3off();
 			L1off();
+			start=0;
 			break;
 		case ALTITUD:
 			estado = STANDBY;
@@ -578,6 +583,7 @@ void Wait(void){
 			M4off();
 			M3off();
 			L1off();
+			start=0;
 			break;
 		case ADJUSTING:
 			estado = STANDBY;
@@ -586,6 +592,7 @@ void Wait(void){
 			M4off();
 			M3off();
 			L1off();
+			start=0;
 			break;
 		case STOP:
 			estado = STOP;
