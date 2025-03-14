@@ -98,11 +98,11 @@
 	 SemaphoreHandle_t xSemaphore;
 	// Semaforo para sincronizar tarea esporadica e interrupcion
 	SemaphoreHandle_t Semaforo_Interrupcion = NULL; 
-	// Crear el semáforo binario 
+	// Crear el semï¿½foro binario 
 
 	 
 	 
-	 /* Declarar aquí las variables protegidas por el semáforo 1 */
+	 /* Declarar aquï¿½ las variables protegidas por el semï¿½foro 1 */
    double Altitud = 0; // Altitud  
    double RX = 0; // Inclinacion eje X 
    double RY = 0; // Inclinacion eje Y
@@ -171,6 +171,49 @@ Obtain_Coordinates_XYZ();
 rotY = - atan2(X, sqrt(Y*Y+Z*Z)) * 180.0/3.1416;
 return rotY;
 }
+
+
+
+
+void M1on(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_SET);
+}
+void M1off(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_13, GPIO_PIN_RESET);
+}
+void M2on(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_SET);
+}
+void M2off(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_15, GPIO_PIN_RESET);
+}
+void M3on(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_SET);
+}
+void M3off(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_12, GPIO_PIN_RESET);
+}
+void M4on(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+}
+void M4off(void){
+	HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+}
+
+void L1on(void){
+	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+}
+void L1off(void){
+	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+}
+void L2on(void){
+	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_SET);
+}
+void L2off(void){
+	// HAL_GPIO_WritePin(GPIOD, GPIO_PIN_14, GPIO_PIN_RESET);
+}
+
+
 
 
 
@@ -284,8 +327,8 @@ sConfigN.Rank = 1;
 sConfigN.SamplingTime = ADC_SAMPLETIME_28CYCLES;
 HAL_ADC_ConfigChannel(&hadc1, &sConfigN); // configura ADC1-Canal_1
 for(;;)
-{// Activación de la lectura
-HAL_ADC_Start(&hadc1); // comienza la conversón AD
+{// Activaciï¿½n de la lectura
+HAL_ADC_Start(&hadc1); // comienza la conversï¿½n AD
 if(HAL_ADC_PollForConversion(&hadc1, 5) == HAL_OK){
 Lectura_ADC1 = HAL_ADC_GetValue(&hadc1); // leemos el valor
 Altitud = Lectura_ADC1; // actualizamos una variable global }
@@ -354,25 +397,43 @@ vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA4 ));
 }
 
 
+
+// enum estado_t {STANDBY, INCL_OK, ADJUSTING, STOP};
+
+// enum estado_t estado = estado_t.STANDBY;
+
+
 void startTarea5(void const * argument){
-	TickType_t lastWakeTime;
+
+  // switch(estado){
+  //     case estado_t.STANDBY:
+  //     break;
+  //     case estado_t.ADJUSTING:
+  //     break;
+  //     case estado_t.INCL_OK:
+  //     break;
+  //     case estado_t.STOP:
+  //     break;
+  // }
+
+  TickType_t lastWakeTime;
   lastWakeTime = xTaskGetTickCount();
-for(;;){
- // Obtain_Coordinates_XYZ();
-	debugX=X - lastX;
- if(X - lastX > 0.2 || X - lastX < -0.2 || Y - lastY > 0.2 || Y - lastY < -0.2 || Z - lastaltitud > 0.2 || Z - lastaltitud < -0.2 ){
-	 vibraciones = vibraciones + 1;
-   if( vibraciones == 3){
-			HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
-	 }
-} else{
-	 vibraciones = 0;
- }
-lastaltitud = Z;
-lastX = X ;
-lastY =  Y ;
-	vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA5 )); 
-}
+  for(;;){
+  // Obtain_Coordinates_XYZ();
+    debugX=X - lastX;
+  if(X - lastX > 0.2 || X - lastX < -0.2 || Y - lastY > 0.2 || Y - lastY < -0.2 || Z - lastaltitud > 0.2 || Z - lastaltitud < -0.2 ){
+    vibraciones = vibraciones + 1;
+    if( vibraciones == 3){
+        HAL_GPIO_WritePin(GPIOD, GPIO_PIN_0, GPIO_PIN_RESET);
+    }
+  } else{
+    vibraciones = 0;
+  }
+  lastaltitud = Z;
+  lastX = X ;
+  lastY =  Y ;
+    vTaskDelayUntil( &lastWakeTime, pdMS_TO_TICKS( T_TAREA5 )); 
+  }
 }
 
 void startTarea6(void const * argument){
@@ -433,7 +494,7 @@ void startTarea7(void const * argument){
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 	long yield = pdFALSE; 
-// se pondrá a pdTRUE si una tarea de mayor prioridad estaba esperando y es desbloqueada
+// se pondrï¿½ a pdTRUE si una tarea de mayor prioridad estaba esperando y es desbloqueada
   if (GPIO_Pin == GPIO_PIN_0) {
 	HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13); // Enciende/apaga un LED 
 	xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
