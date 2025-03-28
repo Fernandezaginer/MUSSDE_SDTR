@@ -129,14 +129,41 @@ void startTarea4(void const * argument);
 void startTarea5(void const * argument);
 void startTarea6(void const * argument);
 void startTarea7(void const * argument);
+void startTareaImprimir(void const * argument);
 int checkVibration();
 /* Variables para depuracion */
 int ContTarea1 = 0;
 int altitud_objetivo = 600;
 int start= 0;
+CAN_HandleTypeDef hcan1;
+CAN_TxHeaderTypeDef pHeader; //declare a specific header for message transmittions
+CAN_RxHeaderTypeDef pRxHeader; //declare header for message reception
+uint32_t TxMailbox; 
+uint8_t ByteSent = 0; //declare byte to be transmitted //declare a receive byte
+uint8_t ByteReceived = 0; //declare a receive byte
+CAN_FilterTypeDef sFilterConfig; //declare CAN filter structure
 
 
-
+void InicializaTransmisionesCAN() {
+//define message header
+pHeader.DLC=1; //give message size of 1 byte
+pHeader.IDE=CAN_ID_STD; //set identifier to standard
+pHeader.RTR=CAN_RTR_DATA; //set data type to remote transmission request
+//define a standard identifier, used for message identification by filters
+pHeader.StdId= 0x2F4; //(##switch this for the other microcontroller##)
+//filter one (stack light blink)
+sFilterConfig.FilterFIFOAssignment=CAN_FILTER_FIFO0; //set fifo assignment
+//the ID that the filter looks for
+sFilterConfig.FilterIdHigh=0x2FF<<5; //(##switch this for the other microcontroller##)
+sFilterConfig.FilterIdLow=0;
+sFilterConfig.FilterMaskIdHigh=0;
+sFilterConfig.FilterMaskIdLow=0;
+sFilterConfig.FilterScale=CAN_FILTERSCALE_32BIT; //set filter scale
+sFilterConfig.FilterActivation=ENABLE;
+HAL_CAN_ConfigFilter(&hcan1, &sFilterConfig); //configure CAN filter
+HAL_CAN_Start(&hcan1); //start CAN
+HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING); //enable interrupts
+}
 
 /* Calculate acc. coordinates and stores them in global variables X Y Z */
 void Obtain_Coordinates_XYZ(){
@@ -648,10 +675,10 @@ void SystemClock_Config(void);
 int main(void){
 	/* Reset of all peripherals, Initializes the Flash interface and the Systick. */
 	HAL_Init();
-
+	MX_CAN1_Init();
 	/* Configure the system clock */
 	SystemClock_Config();
-
+  InicializaTransmisionesCAN();
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_ADC1_Init();
@@ -675,12 +702,7 @@ int main(void){
 	Tarea1Handle = osThreadCreate(osThread(Tarea1), NULL); */
 
 	/* USER CODE BEGIN RTOS_THREADS using FreeRTOS */
-	xTaskCreate(StartTarea1, "Tarea inicial", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL);
-	xTaskCreate(startTarea2, "Tarea inicial 2", configMINIMAL_STACK_SIZE, NULL, PR_TAREA2, NULL);
-	xTaskCreate(startTarea3, "Tarea inicial 3", configMINIMAL_STACK_SIZE, NULL, PR_TAREA3, NULL); 
-	xTaskCreate(startTarea4, "Tarea inicial 4", configMINIMAL_STACK_SIZE, NULL, PR_TAREA4, NULL);
-	xTaskCreate(startTarea5, "Tarea inicial 5", configMINIMAL_STACK_SIZE, NULL, PR_TAREA5, NULL);
-	xTaskCreate(startTarea7, "Tarea inicial 7", configMINIMAL_STACK_SIZE, NULL, PR_TAREA6, NULL);
+	xTaskCreate(startTareaImprimir, "Tarea inicial", configMINIMAL_STACK_SIZE, NULL, PR_TAREA1, NULL);
 	/* Start scheduler */
 	osKernelStart();
 
@@ -729,7 +751,51 @@ void startTarea2(void const * argument){
 		}
 	}
 }
+void startTareaImprimir(void const * argument){
 
+	TickType_t lastWakeTime;
+	lastWakeTime = xTaskGetTickCount();
+	xSemaphoreTake(xSemaphore, portMAX_DELAY);
+	for(;;){
+	
+	switch(ByteReceived){
+	case 1:
+		Xback();
+		break;
+	case 2:
+		Xfor();
+		break;
+	case 3:
+		X0();
+		break;
+	case 4:
+		Yback();
+		break;
+	case 5:
+		Yfor();
+		break;
+	case 6:
+		Y0();
+		break;
+	case 7:
+		Altok();
+		break;
+	case 8:
+		Ascend();
+		break;
+	case 9:
+		Risk();
+		break;
+	case 10:
+		Recover();
+		break;
+	case 11:
+		Wait();
+		break;
+	}
+	vTaskDelayUntil(&lastWakeTime, pdMS_TO_TICKS(T_TAREA2)); 
+}
+}
 
 
 // t3-Vibration
@@ -916,6 +982,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   /* USER CODE END Callback 1 */
 }
+
 
 /**
   * @brief  This function is executed in case of error occurrence.
