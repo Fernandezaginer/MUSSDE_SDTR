@@ -75,13 +75,15 @@
 extern CAN_HandleTypeDef hcan1;
 extern I2C_HandleTypeDef hi2c2;
 extern TIM_HandleTypeDef htim1;
-/* External variables ------------------------------------------------------*/
+
+
 
 // Variables externas para transmisiones en CAN BUS 
 extern CAN_TxHeaderTypeDef pHeader;
 extern CAN_RxHeaderTypeDef pRxHeader;
 extern uint32_t TxMailbox;
 extern uint8_t ByteSent, ByteReceived;
+extern SemaphoreHandle_t Semaforo_Interrupcion;
 
 /* USER CODE BEGIN EV */
 
@@ -215,13 +217,16 @@ void EXTI3_IRQHandler(void)
   * @brief This function handles CAN1 RX0 interrupts.
   */
 void CAN1_RX0_IRQHandler(void)
-{
+{	
+	long yield = pdFALSE;
   /* USER CODE BEGIN CAN1_RX0_IRQn 0 */
 
   /* USER CODE END CAN1_RX0_IRQn 0 */
   HAL_CAN_IRQHandler(&hcan1);
   /* USER CODE BEGIN CAN1_RX0_IRQn 1 */
 	HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &pRxHeader, &ByteReceived);
+	xSemaphoreGiveFromISR(Semaforo_Interrupcion, &yield);
+	portYIELD_FROM_ISR(yield);
   /* USER CODE END CAN1_RX0_IRQn 1 */
 }
 
